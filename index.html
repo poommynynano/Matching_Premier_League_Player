@@ -1,0 +1,430 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Matching Premier League Player</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Kanit:wght@300;400;500;600&display=swap');
+        
+        body {
+            font-family: 'Kanit', sans-serif;
+            background: linear-gradient(135deg, #1e3a8a 0%, #22c55e 100%);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+        
+        .drag-item {
+            cursor: grab;
+            transition: all 0.3s ease;
+        }
+        
+        .drag-item:active {
+            cursor: grabbing;
+            transform: scale(1.05);
+        }
+        
+        .drop-zone {
+            transition: all 0.3s ease;
+            border: 2px dashed transparent;
+        }
+        
+        .drop-zone.drag-over {
+            border-color: #f472b6;
+            background-color: #fdf2f8;
+            transform: scale(1.02);
+        }
+        
+        .correct {
+            background-color: #dcfce7 !important;
+            border-color: #22c55e !important;
+        }
+        
+        .incorrect {
+            background-color: #fee2e2 !important;
+            border-color: #ef4444 !important;
+        }
+        
+        .player-card {
+            background: linear-gradient(145deg, #ffffff, #f0f9ff);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 2px solid #22c55e;
+        }
+        
+        .vocab-card {
+            background: linear-gradient(145deg, #fbbf24, #f59e0b);
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            border: 2px solid #1e3a8a;
+            color: white;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(145deg, #22c55e, #16a34a);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(34, 197, 94, 0.4);
+        }
+        
+        .btn-secondary {
+            background: linear-gradient(145deg, #1e3a8a, #1e40af);
+            transition: all 0.3s ease;
+        }
+        
+        .btn-secondary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px rgba(30, 58, 138, 0.4);
+        }
+        
+        @media (max-width: 768px) {
+            .game-grid {
+                grid-template-columns: 1fr;
+                gap: 1rem;
+            }
+            
+            .vocab-item, .player-card {
+                font-size: 0.875rem;
+                padding: 0.75rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- หน้าแรก -->
+    <div id="homePage" class="min-h-screen flex flex-col items-center justify-center p-4">
+        <div class="text-center max-w-md w-full">
+            <!-- โลโก้ -->
+            <div class="mb-6">
+                <div class="w-24 h-24 mx-auto bg-gradient-to-br from-green-400 to-blue-600 rounded-full flex items-center justify-center text-4xl mb-4 border-4 border-white shadow-lg">
+                    ⚽
+                </div>
+                <h1 class="text-3xl md:text-4xl font-bold text-white mb-2 drop-shadow-lg">Matching Premier League Player</h1>
+                <p class="text-green-100">เกมจับคู่คำศัพท์กับนักเตะพรีเมียลีค</p>
+            </div>
+            
+            <div class="space-y-4">
+                <button onclick="showVocabPage()" class="btn-primary w-full py-4 px-6 text-white font-semibold rounded-xl text-lg">
+                    📚 เรียนคำศัพท์
+                </button>
+                <button onclick="showGamePage()" class="btn-secondary w-full py-4 px-6 text-white font-semibold rounded-xl text-lg">
+                    🎮 เล่นเกมทบทวน
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- หน้าเรียนคำศัพท์ -->
+    <div id="vocabPage" class="hidden min-h-screen p-4">
+        <div class="max-w-6xl mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <button onclick="showHomePage()" class="bg-white hover:bg-gray-100 px-4 py-2 rounded-lg font-medium text-blue-800 border-2 border-blue-800">
+                    ← กลับหน้าแรก
+                </button>
+                <h2 class="text-2xl md:text-3xl font-bold text-white drop-shadow-lg">📚 เรียนคำศัพท์</h2>
+                <div></div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6" id="vocabCards">
+                <!-- คำศัพท์จะถูกสร้างที่นี่ -->
+            </div>
+        </div>
+    </div>
+
+    <!-- หน้าเกมจับคู่ -->
+    <div id="gamePage" class="hidden min-h-screen p-4">
+        <div class="max-w-7xl mx-auto">
+            <div class="flex items-center justify-between mb-6">
+                <button onclick="showHomePage()" class="bg-white hover:bg-gray-100 px-4 py-2 rounded-lg font-medium text-blue-800 border-2 border-blue-800">
+                    ← กลับหน้าแรก
+                </button>
+                <div class="text-center">
+                    <h2 class="text-2xl md:text-3xl font-bold text-white drop-shadow-lg">🎮 เกมจับคู่</h2>
+                    <div class="text-lg font-semibold text-yellow-300 bg-blue-800 px-4 py-2 rounded-lg">คะแนน: <span id="score">0</span>/10</div>
+                </div>
+                <button onclick="resetGame()" class="bg-yellow-400 hover:bg-yellow-500 px-4 py-2 rounded-lg font-medium text-blue-800 border-2 border-blue-800">
+                    🔄 เริ่มใหม่
+                </button>
+            </div>
+            
+            <div class="game-grid grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- คำศัพท์ -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-bold text-center text-white bg-blue-800 py-3 rounded-lg mb-4">🔤 คำศัพท์</h3>
+                    <div id="vocabItems" class="space-y-3">
+                        <!-- คำศัพท์จะถูกสร้างที่นี่ -->
+                    </div>
+                </div>
+                
+                <!-- นักเตะ -->
+                <div class="space-y-4">
+                    <h3 class="text-xl font-bold text-center text-white bg-green-600 py-3 rounded-lg mb-4">⚽ นักเตะ</h3>
+                    <div id="playerItems" class="grid grid-cols-2 gap-3">
+                        <!-- นักเตะจะถูกสร้างที่นี่ -->
+                    </div>
+                </div>
+            </div>
+            
+            <div class="text-center mt-6">
+                <button onclick="checkAnswers()" id="checkBtn" class="btn-primary px-8 py-3 text-white font-semibold rounded-xl text-lg">
+                    ✅ ตรวจคำตอบ
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ข้อมูลคำศัพท์และนักเตะ
+        const vocabulary = [
+            { word: "Goalkeeper", thai: "ผู้รักษาประตู", player: "Alisson", team: "Liverpool", emoji: "🥅" },
+            { word: "Defender", thai: "กองหลัง", player: "Van Dijk", team: "Liverpool", emoji: "🛡️" },
+            { word: "Midfielder", thai: "กองกลาง", player: "De Bruyne", team: "Man City", emoji: "⚡" },
+            { word: "Forward", thai: "กองหน้า", player: "Salah", team: "Liverpool", emoji: "🎯" },
+            { word: "Captain", thai: "กัปตันทีม", player: "Kane", team: "Bayern", emoji: "👑" },
+            { word: "Striker", thai: "กองหน้าตัวจริง", player: "Haaland", team: "Man City", emoji: "⚽" },
+            { word: "Winger", thai: "ปีกซ้าย-ขวา", player: "Sterling", team: "Chelsea", emoji: "🏃" },
+            { word: "Playmaker", thai: "นักสร้างเกม", player: "Özil", team: "Arsenal", emoji: "🎨" },
+            { word: "Substitute", thai: "นักเตะสำรอง", player: "Rashford", team: "Man United", emoji: "🔄" },
+            { word: "Coach", thai: "โค้ช", player: "Guardiola", team: "Man City", emoji: "📋" }
+        ];
+
+        let currentAnswers = {};
+        let score = 0;
+        let isChecked = false;
+
+        // ฟังก์ชันสำหรับเปลี่ยนหน้า
+        function showHomePage() {
+            document.getElementById('homePage').classList.remove('hidden');
+            document.getElementById('vocabPage').classList.add('hidden');
+            document.getElementById('gamePage').classList.add('hidden');
+        }
+
+        function showVocabPage() {
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('vocabPage').classList.remove('hidden');
+            document.getElementById('gamePage').classList.add('hidden');
+            createVocabCards();
+        }
+
+        function showGamePage() {
+            document.getElementById('homePage').classList.add('hidden');
+            document.getElementById('vocabPage').classList.add('hidden');
+            document.getElementById('gamePage').classList.remove('hidden');
+            initGame();
+        }
+
+        // สร้างการ์ดคำศัพท์
+        function createVocabCards() {
+            const container = document.getElementById('vocabCards');
+            container.innerHTML = '';
+            
+            vocabulary.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'vocab-card rounded-xl p-6 text-center';
+                card.innerHTML = `
+                    <div class="text-4xl mb-3">${item.emoji}</div>
+                    <h3 class="text-xl font-bold text-white mb-2">${item.word}</h3>
+                    <p class="text-blue-100 mb-3">${item.thai}</p>
+                    <div class="bg-white rounded-lg p-3 mb-3">
+                        <p class="font-semibold text-blue-600">${item.player}</p>
+                        <p class="text-sm text-gray-500">${item.team}</p>
+                    </div>
+                    <button onclick="speakWord('${item.word}')" class="bg-green-500 hover:bg-green-600 px-4 py-2 rounded-lg font-medium text-white">
+                        🔊 ฟังเสียง
+                    </button>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        // ฟังก์ชันอ่านเสียง
+        function speakWord(word) {
+            if ('speechSynthesis' in window) {
+                const utterance = new SpeechSynthesisUtterance(word);
+                utterance.lang = 'en-US';
+                utterance.rate = 0.8;
+                speechSynthesis.speak(utterance);
+            }
+        }
+
+        // เริ่มเกม
+        function initGame() {
+            currentAnswers = {};
+            score = 0;
+            isChecked = false;
+            document.getElementById('score').textContent = score;
+            
+            createVocabItems();
+            createPlayerItems();
+        }
+
+        // สร้างรายการคำศัพท์
+        function createVocabItems() {
+            const container = document.getElementById('vocabItems');
+            container.innerHTML = '';
+            
+            const shuffledVocab = [...vocabulary].sort(() => Math.random() - 0.5);
+            
+            shuffledVocab.forEach((item, index) => {
+                const vocabItem = document.createElement('div');
+                vocabItem.className = 'vocab-card drag-item rounded-lg p-4 cursor-grab';
+                vocabItem.draggable = true;
+                vocabItem.dataset.word = item.word;
+                vocabItem.innerHTML = `
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <span class="text-lg font-bold text-white">${item.word}</span>
+                            <span class="text-blue-100 ml-2">(${item.thai})</span>
+                        </div>
+                        <button onclick="speakWord('${item.word}')" class="bg-green-500 hover:bg-green-600 p-2 rounded-full text-white">
+                            🔊
+                        </button>
+                    </div>
+                `;
+                
+                // Drag events
+                vocabItem.addEventListener('dragstart', handleDragStart);
+                vocabItem.addEventListener('dragend', handleDragEnd);
+                
+                container.appendChild(vocabItem);
+            });
+        }
+
+        // สร้างรายการนักเตะ
+        function createPlayerItems() {
+            const container = document.getElementById('playerItems');
+            container.innerHTML = '';
+            
+            const shuffledPlayers = [...vocabulary].sort(() => Math.random() - 0.5);
+            
+            shuffledPlayers.forEach(item => {
+                const playerItem = document.createElement('div');
+                playerItem.className = 'player-card drop-zone rounded-lg p-4 text-center min-h-[120px] flex flex-col justify-center';
+                playerItem.dataset.player = item.player;
+                playerItem.innerHTML = `
+                    <div class="text-3xl mb-2">${item.emoji}</div>
+                    <div class="font-bold text-gray-800">${item.player}</div>
+                    <div class="text-sm text-gray-500">${item.team}</div>
+                    <div class="mt-2 min-h-[30px] flex items-center justify-center">
+                        <span class="dropped-word text-sm font-medium text-blue-600"></span>
+                    </div>
+                `;
+                
+                // Drop events
+                playerItem.addEventListener('dragover', handleDragOver);
+                playerItem.addEventListener('drop', handleDrop);
+                playerItem.addEventListener('dragleave', handleDragLeave);
+                
+                container.appendChild(playerItem);
+            });
+        }
+
+        // Drag and Drop handlers
+        let draggedElement = null;
+
+        function handleDragStart(e) {
+            draggedElement = e.target;
+            e.target.style.opacity = '0.5';
+        }
+
+        function handleDragEnd(e) {
+            e.target.style.opacity = '1';
+            draggedElement = null;
+        }
+
+        function handleDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-over');
+        }
+
+        function handleDragLeave(e) {
+            e.currentTarget.classList.remove('drag-over');
+        }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-over');
+            
+            if (!draggedElement || isChecked) return;
+            
+            const word = draggedElement.dataset.word;
+            const player = e.currentTarget.dataset.player;
+            const droppedWordSpan = e.currentTarget.querySelector('.dropped-word');
+            
+            // ลบคำตอบเก่าถ้ามี
+            Object.keys(currentAnswers).forEach(key => {
+                if (currentAnswers[key] === word) {
+                    delete currentAnswers[key];
+                }
+            });
+            
+            // เพิ่มคำตอบใหม่
+            currentAnswers[player] = word;
+            droppedWordSpan.textContent = word;
+            
+            // คำนวณคะแนนใหม่
+            updateScore();
+        }
+
+        // อัพเดทคะแนน
+        function updateScore() {
+            score = 0;
+            Object.keys(currentAnswers).forEach(player => {
+                const word = currentAnswers[player];
+                const correctItem = vocabulary.find(item => item.player === player && item.word === word);
+                if (correctItem) {
+                    score++;
+                }
+            });
+            document.getElementById('score').textContent = score;
+        }
+
+        // ตรวจคำตอบ
+        function checkAnswers() {
+            isChecked = true;
+            
+            // ลบ class เก่า
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.classList.remove('correct', 'incorrect');
+            });
+            
+            // ตรวจสอบคำตอบ
+            Object.keys(currentAnswers).forEach(player => {
+                const word = currentAnswers[player];
+                const playerElement = document.querySelector(`[data-player="${player}"]`);
+                const correctItem = vocabulary.find(item => item.player === player && item.word === word);
+                
+                if (correctItem) {
+                    playerElement.classList.add('correct');
+                    playerElement.querySelector('.dropped-word').innerHTML = `${word} ✅`;
+                } else {
+                    playerElement.classList.add('incorrect');
+                    playerElement.querySelector('.dropped-word').innerHTML = `${word} ❌`;
+                }
+            });
+            
+            // แสดงผลลัพธ์
+            setTimeout(() => {
+                if (score === 10) {
+                    alert('🎉 ยินดีด้วย! คุณได้คะแนนเต็ม 10/10!');
+                } else {
+                    alert(`📊 คะแนนของคุณ: ${score}/10 คะแนน`);
+                }
+            }, 500);
+        }
+
+        // รีเซ็ตเกม
+        function resetGame() {
+            isChecked = false;
+            initGame();
+        }
+
+        // เริ่มต้นแอป
+        document.addEventListener('DOMContentLoaded', function() {
+            showHomePage();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'96e6f1c1f2097323',t:'MTc1NTA3NDgxMS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
